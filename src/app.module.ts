@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
-import { WalletModule } from './modules/wallet/module';
-import { Wallet } from './entities/wallet';
+import { WallectModule } from './modules/wallet/module';
+import { Wallet } from './entities/wallect.entity';
 
 @Module({
   providers: [],
@@ -14,13 +14,13 @@ import { Wallet } from './entities/wallet';
     }),
     TypeOrmModule.forRoot({
       type: 'sqlite',
-      database: 'db.sqlite',
+      database: 'db.db',
       autoLoadEntities: true,
       entities: [Wallet],
       synchronize: true,
     }),
     TerminusModule,
-    WalletModule,
+    WallectModule,
   ],
   controllers: [],
 })
