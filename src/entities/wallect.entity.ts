@@ -5,12 +5,12 @@ export class Wallet {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'address', nullable: true })
+  @Column({ nullable: true })
   address?: string;
-  @Column({ name: 'phone', nullable: true })
+  @Column({ nullable: true })
   phone?: string;
-  @Column({ name: 'certificate', nullable: true })
+  @Column({ nullable: true })
   certificate?: string;
-  @Column({ name: 'password', nullable: true })
+  @Column({ nullable: true })
   password?: string;
 }

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
-import { Wallet } from '../../../entities/wallet';
-import { PrimeSdk } from '@etherspot/prime-sdk';
+import { Wallet } from '../../../entities/wallect.entity';
+import {PrimeSdk, WalletConnectWalletProvider} from '@etherspot/prime-sdk';
 import { ethers } from 'ethers';
-import { getBalanceDto, checkDto, opDto } from '../controller/wallet.dto';
+import {response} from "express";
+import * as stream from "stream";
 
 interface Response {
   status: number;
@@ -17,8 +18,24 @@ export class WalletService {
     @InjectRepository(Wallet)
     private readonly walletRepository: Repository<Wallet>,
   ) {}
+  //'asthma prize volume artefact mule gentle drastic amused general wait barrel student';
+  async create() {
+    const mnemonic =
+      'asthma prize volume artefact mule gentle drastic amused general wait barrel student';
+    // create HD wallet
+    const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic);
 
+    // generate path：m / purpose' / coin_type' / account' / change / address_index
+    const basePath = "m/44'/60'/0'/0";
+    const hdNodeNew = hdNode.derivePath(basePath + '/' + 8);
+    // const walletNew = new ethers.Wallet(hdNodeNew.privateKey);
+    // Create AA Wallet with HD Wallet
+    console.log(hdNodeNew);
+    return '';
+  }
   async batchCreate(numWallet: number): Promise<string> {
+    //const wallets = [];
+    // send five wallets
     console.log('batchCreate start ....');
     for (let i = 0; i < numWallet; i++) {
       await (async () => {
@@ -34,6 +51,11 @@ export class WalletService {
         const pwd = 'planckerDev';
         const json = await wallet.encrypt(pwd);
 
+        // generate path：m / purpose' / coin_type' / account' / change / address_index
+        // const basePath = "m/44'/60'/0'/0";
+        // const hdNodeNew = hdNode.derivePath(basePath + '/' + i);
+
+        // const walletNew = new ethers.Wallet(hdNodeNew.privateKey);
         // Create AA Wallet with HD Wallet
         const primeSdk = new PrimeSdk(
           {
@@ -57,69 +79,6 @@ export class WalletService {
     }
     return '';
   }
-
-  async _createPrimeSdk(certificate: string): Promise<PrimeSdk> {
-    let privateKey = null;
-    if (certificate === '') {
-      // generate random mnemonic
-      const mnemonic = ethers.Mnemonic.entropyToPhrase(ethers.randomBytes(32));
-      // create HD wallet
-      const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic);
-      privateKey = hdNode.privateKey;
-    } else {
-      //let wallet: Wallet;
-      const wallet = await this.walletRepository.findOne({
-        where: { certificate: certificate },
-      });
-
-      if (wallet != null) {
-        const pwd = 'planckerDev';
-        const wallet2 = await ethers.Wallet.fromEncryptedJson(
-          JSON.parse(wallet.password),
-          pwd,
-        );
-        const mnemonic = wallet2['mnemonic'].phrase;
-
-        const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic);
-        privateKey = hdNode.privateKey;
-      }
-    }
-
-    // Create AA Wallet with HD Wallet
-    const primeSdk = new PrimeSdk(
-      {
-        privateKey: privateKey,
-      },
-      {
-        chainId: 11155111,
-        projectKey: '',
-        rpcProviderUrl: 'https://sepolia-bundler.etherspot.io/',
-      },
-    );
-
-    return primeSdk;
-  }
-  async getBalance(dto: getBalanceDto): Promise<Response | undefined> {
-    const { certificate } = dto;
-    try {
-      const primeSdk = await this._createPrimeSdk(certificate);
-      const balance = await primeSdk.getNativeBalance();
-
-      console.log('balances: ', balance);
-      return {
-        status: 200,
-        message: 'success',
-        data: balance,
-      };
-    } catch (error) {
-      return {
-        status: 400,
-        message: 'fail',
-        data: null,
-      };
-    }
-  }
-
   async bind(certificate: string): Promise<Response> {
     // check the phone number
     // check the phone number is bind
@@ -173,8 +132,7 @@ export class WalletService {
       };
     }
   }
-  async check(dto: checkDto): Promise<Response> {
-    const { certificate } = dto;
+  async check(certificate: string): Promise<Response> {
     const result = await this._check(certificate);
 
     return result
@@ -246,33 +204,33 @@ export class WalletService {
     //** example
 
     // get from wallet
-    // const fromWallets: Wallet[] = await this.walletRepository.findBy({});
-    // let fromWallet: Wallet;
-    // for (let i = 0; i < fromWallets.length; i++) {
-    //   if (fromWallets[i].certificate === fromCertificate) {
-    //     fromWallet = fromWallets[i];
-    //     break;
-    //   }
-    // }
-    const fromWallet: Wallet = await this.walletRepository.findOne({
-      where: {
-        certificate: fromCertificate,
-      },
-    });
+    const fromWallets: Wallet[] = await this.walletRepository.findBy({});
+    let fromWallet: Wallet
+    for (let i = 0; i < fromWallets.length; i++) {
+      if (fromWallets[i].certificate === fromCertificate){
+        fromWallet = fromWallets[i]
+        break
+      }
+    }
+    // const fromWallet: Wallet = await this.walletRepository.findOne({
+    //   where: {
+    //     certificate: fromCertificate,
+    //   },
+    // });
     // get recipient wallet
-    const recipientWallet: Wallet = await this.walletRepository.findOne({
-      where: {
-        certificate: toCertificate,
-      },
-    });
-    // const recipientWallets: Wallet[] = await this.walletRepository.findBy({});
-    // let recipientWallet: Wallet;
-    // for (let i = 0; i < recipientWallets.length; i++) {
-    //   if (recipientWallets[i].certificate === toCertificate) {
-    //     recipientWallet = recipientWallets[i];
-    //     break;
-    //   }
-    // }
+    // const recipientWallet: Wallet = await this.walletRepository.findOne({
+    //   where: {
+    //     certificate: toCertificate,
+    //   },
+    // });
+    const recipientWallets: Wallet[] = await this.walletRepository.findBy({});
+    let recipientWallet: Wallet
+    for (let i = 0; i < recipientWallets.length; i++) {
+      if (recipientWallets[i].certificate === toCertificate){
+        recipientWallet = recipientWallets[i]
+        break
+      }
+    }
     if (!fromWallet || !recipientWallet) {
       return {
         status: 404,
@@ -321,13 +279,12 @@ export class WalletService {
     };
   }
 
-  async checkOp(dto: opDto): Promise<Response | undefined> {
-    const { op } = dto;
+  async checkOp(op: string): Promise<Response | undefined> {
     try {
       const primeSdk = await this._createPrimeSdk('');
 
       //0x11782af2acd41bf5573d587ff866546eb2e53ea354af6607001fbcd0a28f3ae6
-      const userOpsReceipt = await primeSdk.getUserOpReceipt(op);
+      const userOpsReceipt = await primeSdk.getUserOpReceipt(op["op"]);
 
       if (userOpsReceipt.success) {
         return {
@@ -342,6 +299,77 @@ export class WalletService {
           data: null,
         };
       }
+    } catch (error) {
+      return {
+        status: 400,
+        message: 'fail',
+        data: null,
+      };
+    }
+  }
+  async _createPrimeSdk(certificate: string): Promise<PrimeSdk> {
+    let privateKey = null;
+    if (certificate === '') {
+      // generate random mnemonic
+      const mnemonic = ethers.Mnemonic.entropyToPhrase(ethers.randomBytes(32));
+      // create HD wallet
+      const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic);
+      privateKey = hdNode.privateKey;
+    } else {
+      let wallet : Wallet
+      const wallets: Wallet[] = await this.walletRepository.findBy({});
+      for (let i = 0; i < wallets.length; i++) {
+        if (typeof(certificate) === "string"){
+          if (wallets[i].certificate === certificate){
+            wallet = wallets[i]
+            break
+          }
+        }else{
+          if (wallets[i].certificate === certificate["Certificate"]){
+            wallet = wallets[i]
+            break
+          }
+        }
+      }
+      if (wallet!=null){
+        const pwd = 'planckerDev';
+        const wallet2 = await ethers.Wallet.fromEncryptedJson(
+            JSON.parse(wallet.password),
+            pwd,
+        );
+        const mnemonic = wallet2['mnemonic'].phrase;
+
+        const hdNode = ethers.HDNodeWallet.fromPhrase(mnemonic);
+        privateKey = hdNode.privateKey
+      }
+    }
+
+    // Create AA Wallet with HD Wallet
+    const primeSdk = new PrimeSdk(
+      {
+        privateKey: privateKey,
+      },
+      {
+        chainId: 11155111,
+        projectKey: '',
+        rpcProviderUrl: 'https://sepolia-bundler.etherspot.io/',
+      },
+    );
+
+    return primeSdk;
+  }
+  async getBalance(certificate: string): Promise<Response | undefined> {
+    try {
+      const primeSdk = await this._createPrimeSdk(certificate);
+      const address = await primeSdk.getCounterFactualAddress();
+      const balance = await primeSdk.getNativeBalance();
+
+      console.log('balances: ', balance);
+      return {
+        status: 200,
+        message: 'success',
+        data: balance,
+      };
     } catch (error) {
       return {
         status: 400,

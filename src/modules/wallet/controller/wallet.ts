@@ -1,18 +1,19 @@
 import { ApiTags } from '@nestjs/swagger';
-import { Controller, Get, Post, Res, Query, Body } from '@nestjs/common';
-import { getBalanceDto, checkDto, opDto } from './wallet.dto';
-
-import { WalletService } from '../service';
+import { Controller, Get, Post, Res, Body, Query } from '@nestjs/common';
 import { Response } from 'express';
+import { WalletService } from '../service';
 import { RequestModel } from './request.model';
-
 @ApiTags('Wallet')
 @Controller('wallet')
 export class WalletController {
   constructor(private readonly service: WalletService) {}
+  @Get('/createOne')
+  public async create(): Promise<string> {
+    return this.service.create();
+  }
   @Get('/test')
   public async test(): Promise<string> {
-    return 'test';
+    return '123';
   }
   // @Get('/batchCreate')
   // public async batchCreate(): Promise<string> {
@@ -26,8 +27,8 @@ export class WalletController {
       .json({ message: result.message, data: result.data });
   }
   @Get('/check')
-  public async check(@Query() dto: checkDto, @Res() res: Response) {
-    const result = await this.service.check(dto);
+  public async check(@Query() certificate: string, @Res() res: Response) {
+    const result = await this.service.check(certificate);
     res
       .status(result.status)
       .json({ message: result.message, data: result.data });
@@ -51,20 +52,20 @@ export class WalletController {
   }
   @Get('/checkOp')
   public async checkOp(
-    @Query() dto: opDto,
+    @Query() op: string,
     @Res() res: Response,
   ): Promise<undefined> {
-    const result = await this.service.checkOp(dto);
+    const result = await this.service.checkOp(op);
     res
       .status(result.status)
       .json({ message: result.message, data: result.data });
   }
   @Get('/getBalance')
   public async getBalance(
-    @Query() dto: getBalanceDto,
+    @Query() certificate: string,
     @Res() res: Response,
   ): Promise<undefined> {
-    const result = await this.service.getBalance(dto);
+    const result = await this.service.getBalance(certificate);
     res
       .status(result.status)
       .json({ message: result.message, data: result.data });
