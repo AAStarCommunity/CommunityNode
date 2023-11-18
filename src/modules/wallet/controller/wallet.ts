@@ -39,3 +39,34 @@ export class WalletController {
       .status(result.status)
       .json({ message: result.message, data: result.data });
   }
+  @Post('/transfer')
+  public async transfer(
+    @Body() dto: RequestModel,
+    @Res() res: Response,
+  ): Promise<undefined> {
+    const result = await this.service.transfer(dto.from, dto.to, dto.value);
+    res
+      .status(result.status)
+      .json({ message: result.message, data: result.data });
+  }
+  @Get('/checkOp')
+  public async checkOp(
+    @Query() dto: opDto,
+    @Res() res: Response,
+  ): Promise<undefined> {
+    const result = await this.service.checkOp(dto);
+    res
+      .status(result.status)
+      .json({ message: result.message, data: result.data });
+  }
+  @Get('/getBalance')
+  public async getBalance(
+    @Query() dto: getBalanceDto,
+    @Res() res: Response,
+  ): Promise<undefined> {
+    const result = await this.service.getBalance(dto);
+    res
+      .status(result.status)
+      .json({ message: result.message, data: result.data });
+  }
+}
