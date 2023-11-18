@@ -1,10 +1,8 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-@Module({
-    imports: [TypeOrmModule.forFeature([])],
-    controllers: [],
-    providers: [],
-    exports: [],
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
 
-})
-export class WalletModule {}
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  await app.listen(3000);
+}
+bootstrap();

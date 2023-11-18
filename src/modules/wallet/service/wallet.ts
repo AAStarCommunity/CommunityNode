@@ -4,7 +4,7 @@ import { Repository, IsNull } from 'typeorm';
 import { Wallet } from '../../../entities/wallet';
 import { PrimeSdk } from '@etherspot/prime-sdk';
 import { ethers } from 'ethers';
-import { getBalanceDto, checkDto, opDto } from '../controller/wallet.dto';
+// import { getBalanceDto, checkDto, opDto } from '../controller/wallet.dto';
 
 interface Response {
   status: number;
