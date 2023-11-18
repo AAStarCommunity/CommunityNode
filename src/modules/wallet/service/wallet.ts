@@ -4,7 +4,7 @@ import { Repository, IsNull } from 'typeorm';
 import { Wallet } from '../../../entities/wallet';
 import { PrimeSdk } from '@etherspot/prime-sdk';
 import { ethers } from 'ethers';
-// import { getBalanceDto, checkDto, opDto } from '../controller/wallet.dto';
+import { getBalanceDto, checkDto, opDto } from '../controller/wallet.dto';
 
 interface Response {
   status: number;
@@ -98,5 +98,256 @@ export class WalletService {
     );
 
     return primeSdk;
-  }  }
+  }
+  async getBalance(dto: getBalanceDto): Promise<Response | undefined> {
+    const { certificate } = dto;
+    try {
+      const primeSdk = await this._createPrimeSdk(certificate);
+      const balance = await primeSdk.getNativeBalance();
+
+      console.log('balances: ', balance);
+      return {
+        status: 200,
+        message: 'success',
+        data: balance,
+      };
+    } catch (error) {
+      return {
+        status: 400,
+        message: 'fail',
+        data: null,
+      };
+    }
+  }
+
+  async bind(certificate: string): Promise<Response> {
+    // check the phone number
+    // check the phone number is bind
+    // create hash
+    // go to bind
+    try {
+      const existsWallet: Wallet = await this.walletRepository.findOne({
+        where: {
+          certificate: certificate,
+        },
+      });
+      if (!existsWallet) {
+        const FindWallet: Wallet = await this.walletRepository.findOne({
+          where: {
+            certificate: IsNull(),
+          },
+        });
+
+        if (!FindWallet) {
+          return {
+            status: 404,
+            message: 'no wallet',
+            data: null,
+          };
+        } else {
+          await this.walletRepository.update(
+            { id: FindWallet.id },
+            { certificate: certificate },
+          );
+        }
+
+        return {
+          status: 200,
+          message: 'success',
+          data: null,
+        };
+      } else {
+        // using interface  Response return result
+        return {
+          status: 409,
+          message: 'this certificate is bind',
+          data: null,
+        };
+      }
+    } catch (error) {
+      console.log(error);
+      return {
+        status: 500,
+        message: 'bind error',
+        data: null,
+      };
+    }
+  }
+  async check(dto: checkDto): Promise<Response> {
+    const { certificate } = dto;
+    const result = await this._check(certificate);
+
+    return result
+      ? {
+          status: 200,
+          message: 'ok',
+          data: null,
+        }
+      : {
+          status: 404,
+          message: 'no wallet',
+          data: null,
+        };
+  }
+  async _check(certificate: string): Promise<boolean> {
+    const FindWallet: Wallet = await this.walletRepository.findOne({
+      where: {
+        certificate: certificate,
+      },
+    });
+
+    return FindWallet ? true : false;
+  }
+  async clearBind(certificate: string): Promise<Response> {
+    const FindWallet: Wallet = await this.walletRepository.findOne({
+      where: {
+        certificate: certificate,
+      },
+    });
+
+    try {
+      if (!FindWallet) {
+        return {
+          status: 404,
+          message: 'no wallet',
+          data: null,
+        };
+      } else {
+        await this.walletRepository.update(
+          { id: FindWallet.id },
+          { certificate: null },
+        );
+      }
+    } catch (error) {
+      return {
+        status: 500,
+        message: 'bind error',
+        data: null,
+      };
+    }
+
+    return {
+      status: 200,
+      message: 'ok',
+      data: null,
+    };
+  }
+
+  async transfer(
+    fromCertificate: string,
+    toCertificate: string,
+    value: string,
+  ): Promise<Response | undefined> {
+    /**
+     * from 0x1eaCDaB310f44dbFDe3DaAa6c663A2818843388B
+     * to 0x1eaCDaB310f44dbFDe3DaAa6c663A2818843388B
+     * value 0.01
+     */
+    //** example
+
+    // get from wallet
+    // const fromWallets: Wallet[] = await this.walletRepository.findBy({});
+    // let fromWallet: Wallet;
+    // for (let i = 0; i < fromWallets.length; i++) {
+    //   if (fromWallets[i].certificate === fromCertificate) {
+    //     fromWallet = fromWallets[i];
+    //     break;
+    //   }
+    // }
+    const fromWallet: Wallet = await this.walletRepository.findOne({
+      where: {
+        certificate: fromCertificate,
+      },
+    });
+    // get recipient wallet
+    const recipientWallet: Wallet = await this.walletRepository.findOne({
+      where: {
+        certificate: toCertificate,
+      },
+    });
+    // const recipientWallets: Wallet[] = await this.walletRepository.findBy({});
+    // let recipientWallet: Wallet;
+    // for (let i = 0; i < recipientWallets.length; i++) {
+    //   if (recipientWallets[i].certificate === toCertificate) {
+    //     recipientWallet = recipientWallets[i];
+    //     break;
+    //   }
+    // }
+    if (!fromWallet || !recipientWallet) {
+      return {
+        status: 404,
+        message: 'no wallet',
+        data: null,
+      };
+    }
+    const recipient = recipientWallet.address;
+    const primeSdk = await this._createPrimeSdk(fromWallet.certificate);
+
+    const address: string = await primeSdk.getCounterFactualAddress();
+    //0x1eaCDaB310f44dbFDe3DaAa6c663A2818843388B
+    console.log('\x1b[33m%s\x1b[0m', `EtherspotWallet address: ${address}`);
+    await primeSdk.clearUserOpsFromBatch();
+    const transactionBatch = await primeSdk.addUserOpsToBatch({
+      to: recipient,
+      value: ethers.parseEther(value),
+    });
+    console.log('transactions: ', transactionBatch);
+    //get balance of the account address
+    const balance = await primeSdk.getNativeBalance();
+
+    console.log('balances: ', balance);
+
+    // balance > value
+    if (balance < value) {
+      return {
+        status: 400,
+        message: 'balance is not enough',
+        data: null,
+      };
+    }
+    // estimate transactions added to the batch and get the fee data for the UserOp
+    const op = await primeSdk.estimate();
+
+    //console.log(`Estimate UserOp: ${await printOp(op)}`);
+
+    // sign the UserOp and sending to the bundler...
+    const uoHash = await primeSdk.send(op);
+    console.log(`UserOpHash: ${uoHash}`);
+
+    return {
+      status: 200,
+      message: 'success',
+      data: uoHash,
+    };
+  }
+
+  async checkOp(dto: opDto): Promise<Response | undefined> {
+    const { op } = dto;
+    try {
+      const primeSdk = await this._createPrimeSdk('');
+
+      //0x11782af2acd41bf5573d587ff866546eb2e53ea354af6607001fbcd0a28f3ae6
+      const userOpsReceipt = await primeSdk.getUserOpReceipt(op);
+
+      if (userOpsReceipt.success) {
+        return {
+          status: 200,
+          message: 'success',
+          data: null,
+        };
+      } else {
+        return {
+          status: 400,
+          message: 'fail',
+          data: null,
+        };
+      }
+    } catch (error) {
+      return {
+        status: 400,
+        message: 'fail',
+        data: null,
+      };
+    }
+  }
 }
