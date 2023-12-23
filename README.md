@@ -1,4 +1,7 @@
 # CommunityNode
+**⚠️ 注意：该仓库已停止维护，请前往新仓库进行后续开发。**
+
+**🆕 新仓库地址：[AirAccountCommunityNode](https://github.com/AAStarCommunity/AirAccountCommunityNode)**
 
 ## Description
 
